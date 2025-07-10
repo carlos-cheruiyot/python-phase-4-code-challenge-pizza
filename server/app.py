@@ -1,51 +1,20 @@
-from flask import Flask, jsonify, request
-from models import db, Restaurant, Pizza, RestaurantPizza
+# server/app.py
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
 
-@app.route('/restaurants', methods=['GET'])
-def get_restaurants():
-    restaurants = Restaurant.query.all()
-    return jsonify([restaurant.to_dict() for restaurant in restaurants])
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
-@app.route('/restaurants/<int:id>', methods=['GET'])
-def get_restaurant(id):
-    restaurant = Restaurant.query.get(id)
-    if restaurant:
-        return jsonify(restaurant.to_dict()), 200
-    return jsonify({"error": "Restaurant not found"}), 404
 
-@app.route('/restaurants/<int:id>', methods=['DELETE'])
-def delete_restaurant(id):
-    restaurant = Restaurant.query.get(id)
-    if restaurant:
-        db.session.delete(restaurant)
-        db.session.commit()
-        return jsonify({}), 204
-    return jsonify({"error": "Restaurant not found"}), 404
+from server.models import Restaurant, Pizza, RestaurantPizza
 
-@app.route('/pizzas', methods=['GET'])
-def get_pizzas():
-    pizzas = Pizza.query.all()
-    return jsonify([pizza.to_dict() for pizza in pizzas])
 
-@app.route('/restaurant_pizzas', methods=['POST'])
-def create_restaurant_pizza():
-    data = request.get_json()
-    new_restaurant_pizza = RestaurantPizza(
-        price=data['price'],
-        pizza_id=data['pizza_id'],
-        restaurant_id=data['restaurant_id']
-    )
-    try:
-        db.session.add(new_restaurant_pizza)
-        db.session.commit()
-        return jsonify(new_restaurant_pizza.to_dict()), 201
-    except ValueError as e:
-        return jsonify({'errors': [str(e)]}), 400
+from server import routes
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
